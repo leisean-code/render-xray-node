@@ -1,6 +1,7 @@
 #!/bin/sh
-# Generate a minimal VLESS + WS inbound from env, then exec xray.
+# Generate a minimal VLESS + XHTTP inbound from env, then exec xray.
 # Required on platforms whose edge terminates TLS and forwards plain HTTP to $PORT.
+# SnapDeploy free tier does not pass WebSocket, so XHTTP (packet-up) is used.
 set -eu
 
 UUID="${UUID:-00000000-0000-0000-0000-000000000000}"
@@ -14,7 +15,7 @@ fi
 
 case "$WSPATH" in
   /*) ;;
-  *) WSPATH="/$WSPATH" ;;
+  *) WSPATH="/$WSPATH";;
 esac
 
 mkdir -p /etc/xray
@@ -32,15 +33,14 @@ cat > "$CFG" <<JSON
         "decryption": "none"
       },
       "streamSettings": {
-        "network": "ws",
+        "network": "xhttp",
         "security": "none",
-        "wsSettings": { "path": "${WSPATH}" }
+        "xhttpSettings": { "path": "${WSPATH}", "mode": "packet-up" }
       }
     }
   ],
   "outbounds": [ { "protocol": "freedom" } ]
 }
 JSON
-
 echo "starting xray on port ${PORT} path ${WSPATH}"
 exec /usr/local/bin/xray run -c "$CFG"
